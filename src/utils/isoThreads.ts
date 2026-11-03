@@ -1,0 +1,68 @@
+import { ISOThreadPreset } from '../types/cad';
+
+export const ISO_THREAD_PRESETS: ISOThreadPreset[] = [
+  {
+    id: 'M4x0.7',
+    label: 'M4 x 0.7mm (Coarse Standard)',
+    diameter: 4,
+    pitch: 0.7,
+    recommendedHeadHeight: 3.5,
+    recommendedHeadWidth: 7.0,
+  },
+  {
+    id: 'M5x0.8',
+    label: 'M5 x 0.8mm (Dash & Trim Bolts)',
+    diameter: 5,
+    pitch: 0.8,
+    recommendedHeadHeight: 4.0,
+    recommendedHeadWidth: 8.5,
+  },
+  {
+    id: 'M6x1.0',
+    label: 'M6 x 1.0mm (Bodywork & Fenders)',
+    diameter: 6,
+    pitch: 1.0,
+    recommendedHeadHeight: 5.0,
+    recommendedHeadWidth: 10.0,
+  },
+  {
+    id: 'M8x1.25',
+    label: 'M8 x 1.25mm (Engine Brackets & Accessories)',
+    diameter: 8,
+    pitch: 1.25,
+    recommendedHeadHeight: 6.5,
+    recommendedHeadWidth: 13.0,
+  },
+  {
+    id: 'M10x1.5',
+    label: 'M10 x 1.5mm (Suspension & Exhaust)',
+    diameter: 10,
+    pitch: 1.5,
+    recommendedHeadHeight: 8.0,
+    recommendedHeadWidth: 16.0,
+  },
+  {
+    id: 'M12x1.75',
+    label: 'M12 x 1.75mm (Wheel & Frame Mounts)',
+    diameter: 12,
+    pitch: 1.75,
+    recommendedHeadHeight: 10.0,
+    recommendedHeadWidth: 19.0,
+  },
+  {
+    id: 'M14x2.0',
+    label: 'M14 x 2.0mm (Heavy Duty Suspension)',
+    diameter: 14,
+    pitch: 2.0,
+    recommendedHeadHeight: 11.5,
+    recommendedHeadWidth: 22.0,
+  },
+  {
+    id: 'M16x2.0',
+    label: 'M16 x 2.0mm (Chassis Subframe Mount)',
+    diameter: 16,
+    pitch: 2.0,
+    recommendedHeadHeight: 13.0,
+    recommendedHeadWidth: 24.0,
+  },
+];

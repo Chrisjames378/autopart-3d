@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPart 3D - Custom Vehicle Replacement Part Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        amber: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        canvas { outline: none; }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="bg-gray-800/90 backdrop-blur border-b border-gray-700 px-4 py-3 sticky top-0 z-50 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-sky-500 to-amber-500 p-2 rounded-lg text-white shadow-lg">
+                <i class="fa-solid font-bold fa-wrench text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-amber-400">
+                    AutoPart 3D <span class="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 ml-1 font-mono">v3.0 PRO CAD</span>
+                </h1>
+                <p class="text-xs text-gray-400">Custom Vehicle Parts, Threads, Barb Fittings & Brackets for 3D Printing</p>
+            </div>
+        </div>
+
+        <!-- Quick Info & Action Bar -->
+        <div class="flex items-center space-x-3">
+            <button id="garageModalBtn" class="bg-gray-700 hover:bg-gray-600 text-amber-400 text-xs font-medium px-3 py-2 rounded-lg shadow flex items-center gap-2 transition border border-gray-600">
+                <i class="fa-solid fa-car text-amber-400"></i>
+                <span>My Garage & Vault</span>
+            </button>
+            <button id="slicerModeBtn" class="bg-gray-700 hover:bg-gray-600 text-sky-400 text-xs font-medium px-3 py-2 rounded-lg shadow flex items-center gap-2 transition border border-gray-600">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Slicer & Infill</span>
+            </button>
+            <button id="aiModalBtn" class="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-medium px-3 py-2 rounded-lg shadow flex items-center gap-2 transition">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Vehicle Preset AI</span>
+            </button>
+            <button id="exportStlBtn" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2 transition border border-sky-400">
+                <i class="fa-solid fa-download"></i>
+                <span>Export 3D Printable STL</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden relative">
+        
+        <!-- Left Sidebar: Part Generator Selector & Controls -->
+        <aside class="lg:col-span-4 xl:col-span-3 bg-gray-800 border-r border-gray-700 p-4 flex flex-col h-[calc(100vh-61px)] overflow-y-auto space-y-5">
+            
+            <!-- Part Category Dropdown -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Select Auto Part Type</label>
+                <div class="relative">
+                    <select id="partTypeSelect" class="w-full bg-gray-900 border border-gray-700 text-gray-100 rounded-lg p-2.5 text-sm font-medium focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none">
+                        <option value="bolt">🔩 Custom Bolt & ISO Thread</option>
+                        <option value="hoseBarb">🔌 Hose Adapter / Barb Fitting</option>
+                        <option value="gasket">⭕ Flange Gasket / Seal Ring</option>
+                        <option value="knob">🎛️ Dash Knob / Switch Button</option>
+                        <option value="bracket">📐 L-Bracket & Mount Adapter</option>
+                        <option value="bushing">⭕ Spacer / Suspension Bushing</option>
+                        <option value="oring">⭕ O-Ring Seal Groove / Washer</option>
+                        <option value="connector">🔌 Wiring Harness Connector Shell</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Standard Automotive ISO Metric Thread Presets -->
+            <div id="metricThreadPresetContainer" class="bg-gray-900/90 p-3 rounded-xl border border-gray-700 space-y-2">
+                <label class="block text-xs font-semibold text-gray-300">Standard Automotive ISO Threads</label>
+                <select id="isoThreadSelect" class="w-full bg-gray-800 border border-gray-700 text-amber-400 font-mono rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none">
+                    <option value="custom">Custom Dimensions</option>
+                    <option value="M4x0.7">M4 x 0.7mm (Coarse Standard)</option>
+                    <option value="M5x0.8">M5 x 0.8mm (Dash & Trim Bolts)</option>
+                    <option value="M6x1.0">M6 x 1.0mm (Bodywork & Fenders)</option>
+                    <option value="M8x1.25">M8 x 1.25mm (Engine Brackets & Accessories)</option>
+                    <option value="M10x1.5">M10 x 1.5mm (Suspension & Exhaust)</option>
+                    <option value="M12x1.75">M12 x 1.75mm (Wheel & Frame Mounts)</option>
+                </select>
+            </div>
+
+            <!-- Global Print Tolerance Compensation -->
+            <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-700 space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                    <label class="font-semibold text-gray-300">Fit Tolerance Offset</label>
+                    <span id="val_tolerance" class="font-mono text-amber-400">+0.15 mm</span>
+                </div>
+                <input type="range" id="input_tolerance" min="0" max="0.5" step="0.05" value="0.15" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                <p class="text-[10px] text-gray-400">Compensates for 3D printer plastic expansion so threads and press-fits slide together.</p>
+            </div>
+
+            <!-- Material Selector & Heat/Chemical Calculator -->
+            <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-700 space-y-2">
+                <label class="block text-xs font-semibold text-gray-300">Automotive Print Filament Choice</label>
+                <select id="filamentMaterialSelect" class="w-full bg-gray-800 border border-gray-700 text-sky-400 font-medium rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-500 outline-none">
+                    <option value="petg">PETG - General Auto / Cabin (80°C)</option>
+                    <option value="asa">ASA - Under-Hood & UV Resistant (100°C)</option>
+                    <option value="abs">ABS - High Strength & Impact (98°C)</option>
+                    <option value="tpu">TPU 95A - Flexible Gaskets & Seals</option>
+                    <option value="nylon">Nylon PA12 - Fluid Hose Barbs & Gears (130°C)</option>
+                    <option value="cfpc">CF-PC (Carbon Fiber Polycarbonate) - Turbo/Engine Bay (145°C)</option>
+                </select>
+                <div class="grid grid-cols-3 gap-2 text-[10px] font-mono text-center pt-1 border-t border-gray-800">
+                    <div class="bg-gray-800 p-1.5 rounded">
+                        <div class="text-gray-400">Max Temp</div>
+                        <div id="matTemp" class="text-amber-400 font-bold">80°C</div>
+                    </div>
+                    <div class="bg-gray-800 p-1.5 rounded">
+                        <div class="text-gray-400">Oil/Fuel</div>
+                        <div id="matOil" class="text-emerald-400 font-bold">Good</div>
+                    </div>
+                    <div class="bg-gray-800 p-1.5 rounded">
+                        <div class="text-gray-400">UV Rating</div>
+                        <div id="matUV" class="text-sky-400 font-bold">Moderate</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Parametric Control Panel -->
+            <div id="controlsContainer" class="space-y-4 bg-gray-850 p-4 rounded-xl border border-gray-700/60 shadow-inner">
+                <div class="flex items-center justify-between border-b border-gray-700 pb-2">
+                    <h3 id="panelTitle" class="text-sm font-bold text-sky-400 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> Bolt Dimensions
+                    </h3>
+                    <span class="text-xs text-gray-400 font-mono">Unit: mm</span>
+                </div>
+
+                <!-- Parameters dynamically generated by JS here -->
+                <div id="dynamicFields" class="space-y-3"></div>
+            </div>
+
+            <!-- Cloud Part Vault Quick Action Button -->
+            <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-700 space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold text-gray-300"><i class="fa-solid fa-vault text-amber-400"></i> Cloud Part Vault</span>
+                    <span class="text-[10px] text-gray-400">Vehicle Linked</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="quickSavePartBtn" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Save to Vault
+                    </button>
+                    <button id="openVaultBtn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 text-xs px-3 py-2 rounded-lg transition">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Printing & Assembly Installation Guide -->
+            <div class="bg-sky-950/40 rounded-xl p-3 border border-sky-900/60 space-y-1 text-xs text-sky-200">
+                <div class="font-semibold text-sky-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-screwdriver-wrench"></i> Post-Processing & Install
+                </div>
+                <p id="printingTip" class="text-gray-300 text-[11px] leading-relaxed">
+                    Tap threaded holes with a steel metric tap set after printing. For high-torque bolts, insert brass heat-set threaded inserts with a soldering iron.
+                </p>
+            </div>
+
+        </aside>
+
+        <!-- Center Viewport: 3D CAD Render Canvas -->
+        <section class="lg:col-span-8 xl:col-span-9 bg-gray-950 relative flex flex-col h-[calc(100vh-61px)]">
+            
+            <!-- Canvas Overlay Controls -->
+            <div class="absolute top-4 left-4 z-10 flex items-center space-x-2 bg-gray-800/80 backdrop-blur px-3 py-2 rounded-lg border border-gray-700 shadow">
+                <button id="resetCamBtn" title="Reset View" class="text-gray-300 hover:text-white text-xs px-2 py-1 rounded bg-gray-700/60 hover:bg-gray-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-to-dot"></i> Reset Camera
+                </button>
+                <button id="toggleWireframeBtn" title="Toggle Wireframe View" class="text-gray-300 hover:text-white text-xs px-2 py-1 rounded bg-gray-700/60 hover:bg-gray-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-cube"></i> <span id="wireframeStatus">Solid</span>
+                </button>
+                <button id="toggleGridBtn" title="Toggle Bed Grid" class="text-gray-300 hover:text-white text-xs px-2 py-1 rounded bg-gray-700/60 hover:bg-gray-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-border-all"></i> Grid
+                </button>
+            </div>
+
+            <!-- Layer Slice Simulation Overlay Controls -->
+            <div id="slicerOverlay" class="absolute bottom-12 left-4 z-10 hidden bg-gray-800/90 backdrop-blur px-4 py-3 rounded-xl border border-sky-500/50 shadow-2xl space-y-3 w-80">
+                <div class="flex items-center justify-between text-xs text-sky-400 font-bold border-b border-gray-700 pb-1">
+                    <span><i class="fa-solid fa-layer-group"></i> 3D Slicer & Infill Simulator</span>
+                    <button id="closeSlicerBtn" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
+                        <span>Layer Height Preview:</span>
+                        <span id="sliceLayerVal" class="font-mono text-amber-400">100%</span>
+                    </div>
+                    <input type="range" id="sliceSlider" min="5" max="100" value="100" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-sky-400">
+                </div>
+                <div>
+                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
+                        <span>Infill Density:</span>
+                        <span id="infillVal" class="font-mono text-sky-400">40% Gyroid</span>
+                    </div>
+                    <input type="range" id="infillSlider" min="10" max="100" step="5" value="40" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-sky-400">
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] font-mono text-gray-300 pt-1 border-t border-gray-700/60">
+                    <div>Est. Print Time: <span id="estPrintTime" class="text-amber-400">22 mins</span></div>
+                    <div>Est. Filament: <span id="estFilament" class="text-sky-400">14.2 g</span></div>
+                </div>
+            </div>
+
+            <!-- Dimension Display Widget -->
+            <div class="absolute top-4 right-4 z-10 bg-gray-800/80 backdrop-blur px-3 py-2 rounded-lg border border-gray-700 text-xs font-mono text-gray-300 shadow">
+                <div class="text-gray-400 font-sans font-semibold mb-1">Part Dimensions (X/Y/Z):</div>
+                <div id="partBoundingBox" class="text-amber-400">0.0 × 0.0 × 0.0 mm</div>
+            </div>
+
+            <!-- Interactive 3D WebGL Canvas -->
+            <div id="canvasContainer" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+            <!-- Viewport Bottom Status Bar -->
+            <div class="bg-gray-900 border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-400 font-mono">
+                <div class="flex items-center space-x-4">
+                    <span><i class="fa-solid fa-layer-group text-sky-400"></i> Triangle Count: <span id="polyCount" class="text-gray-200">0</span></span>
+                    <span><i class="fa-solid fa-ruler-combined text-amber-400"></i> Clearance: <span id="toleranceDisplay" class="text-gray-200">+0.15 mm</span></span>
+                </div>
+                <div>
+                    <span>Hold Left Click + Drag to Rotate | Right Click to Pan | Scroll to Zoom</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Multi-Vehicle Garage & Cloud Part Vault Modal -->
+    <div id="garageModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-gray-850 border border-gray-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-amber-500/20 text-amber-400 p-2 rounded-lg border border-amber-500/30">
+                        <i class="fa-solid fa-garage text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-100">Multi-Vehicle Garage & Cloud Vault</h2>
+                        <p class="text-xs text-gray-400">Save custom CAD part presets organized by vehicle model and specifications</p>
+                    </div>
+                </div>
+                <button id="closeGarageModalBtn" class="text-gray-400 hover:text-white text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body with Tabs -->
+            <div class="flex-1 p-6 overflow-y-auto space-y-6">
+                <!-- Vehicle Garage Selector Grid -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-car-side"></i> My Vehicle Fleet
+                        </h3>
+                        <button id="addVehicleBtn" class="bg-amber-600/80 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition">
+                            <i class="fa-solid fa-plus"></i> Add Vehicle
+                        </button>
+                    </div>
+
+                    <div id="garageVehicleGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <!-- Vehicle Cards dynamically populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Cloud Vault Saved Parts Library -->
+                <div class="border-t border-gray-700/80 pt-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-vault"></i> Saved 3D Part Presets
+                            </h3>
+                            <p class="text-xs text-gray-400">CAD files saved for your current vehicle selection</p>
+                        </div>
+                        <span id="vaultCountBadge" class="bg-sky-950 text-sky-400 border border-sky-800 text-xs font-mono px-2.5 py-1 rounded-full">0 Saved Parts</span>
+                    </div>
+
+                    <div id="vaultPartsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Saved Parts dynamically loaded by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-12 right-6 z-50 bg-sky-600 text-white px-4 py-3 rounded-xl shadow-2xl border border-sky-400 flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <i class="fa-solid fa-circle-check text-lg"></i>
+        <span id="toastMsg" class="text-sm font-medium">Part updated successfully!</span>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script>
+        // --- Multi-Vehicle Garage & Cloud Vault State ---
+        let defaultGarageVehicles = [
+            { id: 'veh-1', name: '2018 Toyota Hilux', engine: '2.8L Turbo Diesel', partsCount: 3, icon: 'fa-truck-pickup' },
+            { id: 'veh-2', name: '2021 Ford Ranger', engine: '3.2L Wildtrak', partsCount: 2, icon: 'fa-truck-monster' },
+            { id: 'veh-3', name: '2015 Holden Commodore', engine: '6.0L V8 SS', partsCount: 4, icon: 'fa-car' }
+        ];
+
+        let activeVehicleId = 'veh-1';
+
+        let savedVaultParts = [
+            {
+                id: 'part-101',
+                vehicleId: 'veh-1',
+                name: 'Coolant Hose Barb Adapter',
+                partType: 'hoseBarb',
+                params: { innerDiameter: 12, outerDiameter: 16, length: 45, barbCount: 3, barbDepth: 1.5, wallThickness: 3 },
+                date: '2026-10-15',
+                notes: 'Print in Nylon PA12 for high temperature engine bay coolant hose fitment.'
+            },
+            {
+                id: 'part-102',
+                vehicleId: 'veh-1',
+                name: 'Exhaust Heat Shield Flange Gasket',
+                partType: 'gasket',
+                params: { innerDiameter: 35, outerDiameter: 65, thickness: 3, boltHoleDiameter: 8, boltHoles: 4, pcd: 50 },
+                date: '2026-10-22',
+                notes: 'Print in flexible TPU 95A rubber for leak-proof sealing.'
+            },
+            {
+                id: 'part-103',
+                vehicleId: 'veh-2',
+                name: 'Dash Switch Knob Replacement',
+                partType: 'knob',
+                params: { diameter: 22, height: 18, shaftDiameter: 6, shaftType: 'd-shaft', gripRibs: 12 },
+                date: '2026-11-01',
+                notes: 'PETG print with 40% gyroid infill.'
+            }
+        ];
+
+        // Garage UI Rendering & Management Functions
+        function renderGarageUI() {
+            const vehicleGrid = document.getElementById('garageVehicleGrid');
+            if (!vehicleGrid) return;
+
+            vehicleGrid.innerHTML = defaultGarageVehicles.map(v => {
+                const isActive = v.id === activeVehicleId;
+                return `
+                    <div onclick="selectActiveVehicle('${v.id}')" class="p-3.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+                        isActive ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                    }">
+                        <div class="flex items-center space-x-3">
+                            <div class="${isActive ? 'text-amber-400' : 'text-gray-400'} text-xl">
+                                <i class="fa-solid ${v.icon}"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-xs">${v.name}</div>
+                                <div class="text-[10px] text-gray-400">${v.engine}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded ${isActive ? 'bg-amber-500/20 text-amber-300' : 'bg-gray-700 text-gray-400'}">
+                                ${savedVaultParts.filter(p => p.vehicleId === v.id).length} Parts
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            renderVaultParts();
+        }
+
+        function selectActiveVehicle(vehId) {
+            activeVehicleId = vehId;
+            renderGarageUI();
+            const veh = defaultGarageVehicles.find(v => v.id === vehId);
+            if (veh) showToast(`Switched active vehicle context to ${veh.name}`);
+        }
+
+        function renderVaultParts() {
+            const vaultGrid = document.getElementById('vaultPartsGrid');
+            const countBadge = document.getElementById('vaultCountBadge');
+            if (!vaultGrid) return;
+
+            const filteredParts = savedVaultParts.filter(p => p.vehicleId === activeVehicleId);
+            if (countBadge) countBadge.textContent = `${filteredParts.length} Saved Parts`;
+
+            if (filteredParts.length === 0) {
+                vaultGrid.innerHTML = `
+                    <div class="col-span-2 text-center py-8 bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-4">
+                        <i class="fa-solid fa-folder-open text-gray-600 text-3xl mb-2"></i>
+                        <p class="text-xs text-gray-400">No saved CAD models for this vehicle yet.</p>
+                        <p class="text-[10px] text-amber-400 mt-1">Configure parameters on the left and click "Save to Vault".</p>
+                    </div>
+                `;
+                return;
+            }
+
+            vaultGrid.innerHTML = filteredParts.map(p => `
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-500/60 transition">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-xs text-sky-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-cubes"></i> ${p.name}
+                            </h4>
+                            <span class="text-[9px] font-mono bg-gray-900 px-2 py-0.5 rounded text-gray-400 uppercase">${p.partType}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-300 mt-1.5 line-clamp-2">${p.notes}</p>
+                        <div class="text-[10px] font-mono text-gray-400 mt-2 flex justify-between">
+                            <span>Saved: ${p.date}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3 pt-2 border-t border-gray-700/60">
+                        <button onclick="loadVaultPart('${p.id}')" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] py-1.5 rounded font-semibold transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-file-import"></i> Load Model
+                        </button>
+                        <button onclick="deleteVaultPart('${p.id}')" class="bg-gray-700 hover:bg-red-900/60 text-gray-300 hover:text-red-400 px-2.5 py-1.5 rounded transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveCurrentPartToVault() {
+            const veh = defaultGarageVehicles.find(v => v.id === activeVehicleId);
+            const vehName = veh ? veh.name : 'Vehicle';
+            
+            const partName = prompt(`Enter a label for this saved CAD part (${vehName}):`, `${currentPartType.toUpperCase()} Replacement`);
+            if (!partName) return;
+
+            const newVaultPart = {
+                id: `part-${Date.now()}`,
+                vehicleId: activeVehicleId,
+                name: partName,
+                partType: currentPartType,
+                params: JSON.parse(JSON.stringify(partParams[currentPartType])),
+                date: new Date().toISOString().split('T')[0],
+                notes: `Custom CAD part saved for ${vehName} with +${toleranceOffset}mm tolerance offset.`
+            };
+
+            savedVaultParts.unshift(newVaultPart);
+            renderGarageUI();
+            showToast(`Saved "${partName}" to Cloud Vault!`);
+        }
+
+        function loadVaultPart(partId) {
+            const part = savedVaultParts.find(p => p.id === partId);
+            if (!part) return;
+
+            currentPartType = part.partType;
+            document.getElementById('partTypeSelect').value = currentPartType;
+
+            Object.assign(partParams[currentPartType], part.params);
+            buildControlsUI();
+            rebuild3DModel();
+
+            document.getElementById('garageModal').classList.add('hidden');
+            showToast(`Loaded "${part.name}" into 3D Viewport!`);
+        }
+
+        function deleteVaultPart(partId) {
+            if (!confirm('Are you sure you want to delete this part from your vault?')) return;
+            savedVaultParts = savedVaultParts.filter(p => p.id !== partId);
+            renderGarageUI();
+            showToast('Part removed from vault.');
+        }
+
+        // Additional Garage Event Bindings
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('garageModal');
+            const openBtn = document.getElementById('garageModalBtn');
+            const openVaultBtn = document.getElementById('openVaultBtn');
+            const closeBtn = document.getElementById('closeGarageModalBtn');
+            const saveBtn = document.getElementById('quickSavePartBtn');
+            const addVehBtn = document.getElementById('addVehicleBtn');
+
+            if (openBtn) openBtn.addEventListener('click', () => { renderGarageUI(); modal.classList.remove('hidden'); });
+            if (openVaultBtn) openVaultBtn.addEventListener('click', () => { renderGarageUI(); modal.classList.remove('hidden'); });
+            if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            if (saveBtn) saveBtn.addEventListener('click', saveCurrentPartToVault);
+
+            if (addVehBtn) {
+                addVehBtn.addEventListener('click', () => {
+                    const name = prompt('Enter Vehicle Name & Year (e.g., 2022 Nissan Navara):');
+                    if (!name) return;
+                    const engine = prompt('Enter Engine/Trim specs (e.g., 2.3L Twin Turbo):', 'Standard Specs');
+                    
+                    const newVeh = {
+                        id: `veh-${Date.now()}`,
+                        name: name,
+                        engine: engine || 'Standard Engine',
+                        partsCount: 0,
+                        icon: 'fa-truck-pickup'
+                    };
+
+                    defaultGarageVehicles.push(newVeh);
+                    activeVehicleId = newVeh.id;
+                    renderGarageUI();
+                    showToast(`Added ${name} to Garage!`);
+                });
+            }
+        });
+    </script>
+<!-- ... existing code -->

@@ -1,0 +1,6 @@
+{
+  "name": "AutoPart 3D - Custom Vehicle Part Generator",
+  "description": "Parametric 3D CAD replacement vehicle part generator with threads, hose barbs, gaskets, brackets, 3D slicer preview, STL export, and AI preset assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
